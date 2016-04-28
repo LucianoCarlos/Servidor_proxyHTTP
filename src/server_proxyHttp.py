@@ -6,7 +6,6 @@ from filtro_conteudo import *
 from controle_cache import *
 from thread import start_new_thread, exit
 import argparse
-import proxy
 
 _TIMEOUT = 2
 __DESCRICAO__ = ''' Simples servidor proxy para conexoes http'''
@@ -248,7 +247,7 @@ if __name__ == '__main__':
     ''' Função principal '''
     arguments = help()
     try:
-        #proxy.setup_http_proxy('10.0.0.254', 8080)
+        # proxy.setup_http_proxy('10.0.0.254', 8080)
         iniciaServidor(arguments)
     except KeyboardInterrupt:
         print '\n\nEncerrando servidor...\n\n'
