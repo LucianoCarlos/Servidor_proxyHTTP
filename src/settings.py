@@ -13,13 +13,16 @@ BUFFER_SIZE = 4096
 DIR_CACHE = '../cache/'
 
 # Página html de informação de bloqueio
-PAGINA_BLOQUEIO = '../html/erro.html'
+PAGINA_BLOQUEIO = '../html/bloqueio.html'
 
-# Tamanho máximos do arquivos caches.
-TAMANHO_MAX_CACHE = 100000
+# Tamanho mínimo em bytes de arquivos que podem ser armazenado em cache.
+TAMANHO_MIN_CACHE = 100
+
+# Tamanho máximos em bytes do arquivos que podem ser armazenado em cache.
+TAMANHO_MAX_CACHE = 1000
 
 # Arquivo de palavras bloqueadas.
-PALAVRAS_BLOQUEADAS = '../conf/palavras.conf'
+PALAVRAS_BLOQUEADAS = '../config/palavras.conf'
 
 # Arquivo de dominios bloqueados.
-DOMINIOS_BLOQUEADOS = '../conf/dominios.conf'
+DOMINIOS_BLOQUEADOS = '../config/dominios.conf'
