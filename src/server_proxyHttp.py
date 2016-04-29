@@ -193,7 +193,7 @@ def abre_arquivo(nome_arq):
         pass
     return dados
 
-
+
 def statusResposta(dados):
     ''' Retonar o status da resposta '''
     return 1 if not dados else int(dados.split()[1])
