@@ -6,13 +6,14 @@ from filtro_conteudo import *
 from controle_cache import *
 from thread import start_new_thread, exit
 import argparse
+import proxy
 
 _TIMEOUT = 2
-__DESCRICAO__ = ''' Simples servidor proxy para conexoes http'''
+__DESCRICAO__ = ''' Simples servidor proxy para conexões http'''
 
 
 def help():
-    ''' Trata argumentos inseridos pelo usuario, exibe texto de ajuda '''
+    ''' Trata argumentos inseridos pelo usuário, exibe texto de ajuda '''
     # Descrição do programa.
     parser = argparse.ArgumentParser(description=__DESCRICAO__)
 
@@ -24,6 +25,7 @@ def help():
 
 
 class ClienteHTTP:
+    ''' Esta classe define uma conexão http com um host. '''
 
     def __init__(self, host='', port=80):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
@@ -34,16 +36,6 @@ class ClienteHTTP:
 
     def is_html(self):
         return True if 'text/html' in self.dado else False
-
-    def is_no_cache(self):
-        controle = ''
-        try:
-            controle = self.dado.split('Cache-Control')[1].split('\r\n')[0]
-            if 'private' in controle or 'no-store' in controle or 'no-cache' in controle or 'Cookie' in self.dado:
-                return True
-        except IndexError as e:
-            pass
-        return False
 
     def recebe_dados(self, buffer_size):
         self.dado = ''
@@ -95,7 +87,7 @@ def escutaConexao(servidor):
         # Verifica conexão https. Caso seja, rejeita.
         if verificaHttps(header) or not header:
             continue
-        print is_bloqueado, [infoCliente[0]], header.split('\r\n')[0], '\n'
+        print[infoCliente[0]], '--', header.split('\r\n')[0], '\n'
         if is_bloqueado == False:
             start_new_thread(respondeCliente, tuple([header,  con]))
 
@@ -129,16 +121,19 @@ def respondeCliente(header, con):
 
     # Verifica permissao do dominio.
     if verificaDominio(headers['Host']):
+        print 'Host bloqueado', headers['Host']
         con.send(abre_arquivo(PAGINA_BLOQUEIO))
         con.close()
-        thread.exit()
+        exit()
 
     # Ler arquivo presente em cache.
     cache = ler_cache(req[1])
 
     try:
         cliente = ClienteHTTP(headers['Host'], 80)
-    except socket.gaierror as e:
+    except socket.gaierror:
+        exit()
+    except socket.error:
         exit()
 
     # Define timeout e envia cabeçalho para servidor web.
@@ -149,9 +144,9 @@ def respondeCliente(header, con):
 
     # Recebe dados
     dado, dados = cliente.recebe_dados(BUFFER_SIZE), ''
-    is_cache = cliente.is_no_cache()
 
     if statusResposta(dado) == 304 and cache:
+        # print '**********arquivo em cache************'
         con.send(cache)
     else:
 
@@ -181,7 +176,8 @@ def respondeCliente(header, con):
                 dado = cliente.recebe_dados(BUFFER_SIZE)
 
         # Gravando cache.
-        if len(dados) <= TAMANHO_MAX_CACHE:
+        tam_arq = len(dados)
+        if tam_arq <= TAMANHO_MAX_CACHE and tam_arq > TAMANHO_MIN_CACHE:
             grava_arquivo_cache(req[1], dados)
     con.close()
     cliente.terminaConexao()
@@ -197,7 +193,7 @@ def abre_arquivo(nome_arq):
         pass
     return dados
 
-
+
 def statusResposta(dados):
     ''' Retonar o status da resposta '''
     return 1 if not dados else int(dados.split()[1])
@@ -210,9 +206,8 @@ def verificaHttps(request):
 
 def extraiCabecalho(header):
     ''' Extrai dados do cabeçalho. Retorna uma tuple os dados extraidos.
-            Uma tuple contendo dados de requisição, dicionario contendo campos,
-            e os dados caso seja uma requisição POST. 
-
+        Uma tuple contendo dados de requisição, dicionario contendo campos,
+        e os dados caso seja uma requisição POST. 
     '''
     header_dict = {}
     header = header.split('\r\n')
@@ -235,7 +230,7 @@ def extraiCabecalho(header):
 
 def obterData(dados):
     ''' Obtem a data de um cabeçalho.
-            Retorna data caso exista e False caso contrário.
+        Retorna data caso exista e False caso contrário.
     '''
     try:
         return dados.split('Date: ')[1].split('\r\n')[0]
