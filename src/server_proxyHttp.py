@@ -8,7 +8,7 @@ from thread import start_new_thread, exit
 import argparse
 
 _TIMEOUT = 2
-__DESCRICAO__ = ''' Simples servidor proxy para conexões http'''
+__DESCRICAO__ = ''' Simples servidor proxy para conexões http '''
 
 
 def help():
