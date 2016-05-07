@@ -4,7 +4,6 @@ from os import path, makedirs
 from urlparse import urlparse, urljoin
 from settings import DIR_CACHE
 from shutil import rmtree
-from server_proxyHTTP import verifica_html
 
 
 def separa_url(url):
