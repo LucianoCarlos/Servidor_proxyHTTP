@@ -1,8 +1,10 @@
 # coding: utf-8
 
-from os import makedirs, path
+from os import path, makedirs
 from urlparse import urlparse, urljoin
 from settings import DIR_CACHE
+from shutil import rmtree
+from server_proxyHTTP import verifica_html
 
 
 def separa_url(url):
@@ -17,7 +19,6 @@ def ler_cache(requisicao):
     ''' Pesquisa um arquivo em disco. Se existir retorna seu conteúdo.
         Caso contrario retorna False.
     '''
-
     nome_dir, nome_arq = separa_url(requisicao)
 
     if not nome_arq:
@@ -28,7 +29,7 @@ def ler_cache(requisicao):
     try:
         return open(nome_dir + '/' + nome_arq).read()
     except IOError:
-        return False
+        return ''
 
 
 def grava_arquivo_cache(url, dados):
@@ -52,3 +53,10 @@ def grava_arquivo_cache(url, dados):
             open(nome_dir + '/' + nome_arq, 'w').write(dados)
         except IOError:
             pass
+
+
+def apaga_conteudo_cache(nome_pasta):
+    try:
+        rmtree(DIR_CACHE + nome_pasta)
+    except OSError:
+        pass
