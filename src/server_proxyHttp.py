@@ -6,6 +6,7 @@ from filtro_conteudo import *
 from controle_cache import *
 from thread import start_new_thread, exit
 import argparse
+import proxy
 
 _TIMEOUT = 2
 __DESCRICAO__ = ''' Simples servidor proxy para conexões http'''
@@ -114,72 +115,75 @@ def cria_new_header(req, headers, submit, cache):
     return new_header + submit
 
 
+def verifica_html(dados):
+    ''' Verifica se um conteudo de dados e do tipo text/html '''
+    return True if 'text/html' in dados else False
+
+
 def respondeCliente(header, con):
+	''' Responde a requisições ao cliente '''
+
     # Extraindo requisição do cabeçalho.
-    req, headers, submit = extraiCabecalho(header)
+	req, headers, submit = extraiCabecalho(header)
 
-    # Verifica permissao do dominio.
-    if verificaDominio(headers['Host']):
-        print 'Host bloqueado', headers['Host']
-        con.send(abre_arquivo(PAGINA_BLOQUEIO))
-        con.close()
-        exit()
+	# Verifica permissao do dominio.
+	if verificaDominio(headers['Host']):
+	    bloqueio(con, headers['Host'], PAGINA_BLOQUEIO)
 
-    # Ler arquivo presente em cache.
-    cache = ler_cache(req[1])
+	# Ler arquivo presente em cache.
+	cache = ler_cache(req[1])
 
-    try:
-        cliente = ClienteHTTP(headers['Host'], 80)
-    except socket.gaierror:
-        exit()
-    except socket.error:
-        exit()
+	try:
+	    cliente = ClienteHTTP(headers['Host'], 80)
+	except:
+	    exit()
 
-    # Define timeout e envia cabeçalho para servidor web.
-    cliente.defineTimeout(_TIMEOUT)
+	# Define timeout e envia cabeçalho para servidor web.
+	cliente.defineTimeout(_TIMEOUT)
 
-    # Envia dados para o servidor web.
-    cliente.enviaDados(cria_new_header(req, headers, submit, cache))
+	# Envia dados para o servidor web.
+	cliente.enviaDados(cria_new_header(req, headers, submit, cache))
 
-    # Recebe dados
-    dado, dados = cliente.recebe_dados(BUFFER_SIZE), ''
+	# Recebe dados
+	dado, dados = cliente.recebe_dados(BUFFER_SIZE), ''
 
-    if statusResposta(dado) == 304 and cache:
-        # print '**********arquivo em cache************'
-        con.send(cache)
-    else:
+	if statusResposta(dado) == 304 and cache:
+	    # print '**********arquivo em cache************'
+	    if verifica_html(cache) and pesquisaPalavra(cache):
+	        is_bloqueado = True
+	        bloqueio(con, headers['Host'], PAGINA_BLOQUEIO)
+	    dados = cache
+	else:
+	    ishtml = cliente.is_html()
+	    while True:
+	        if not dado:
+	            break
+	        dados = dados + dado
+	        dado = cliente.recebe_dados(BUFFER_SIZE)
 
-        if cliente.is_html():
-            while True:
-                if not dado:
-                    break
-                dados = dados + dado
-                dado = cliente.recebe_dados(BUFFER_SIZE)
+	    if ishtml and pesquisaPalavra(dados):
+	        is_bloqueado = True
+	        bloqueio(con, headers['Host'], PAGINA_BLOQUEIO)
 
-            if pesquisaPalavra(dados):
-                is_bloqueado = True
-                dados = abre_arquivo(PAGINA_BLOQUEIO)
-            con.send(dados)
-            con.close()
+	# Envia dados ao cliente.
+	con.send(dados)
 
-        else:
-            while True:
-                if not dado:
-                    break
-                try:
-                    con.send(dado)
-                except socket.error:
-                    con.close()
-                    exit()
-                dados = dados + dado
-                dado = cliente.recebe_dados(BUFFER_SIZE)
+	# Gravando cache.
+	tam_arq = len(dados)
+	if tam_arq <= TAMANHO_MAX_CACHE and tam_arq > TAMANHO_MIN_CACHE:
+	    grava_arquivo_cache(req[1], dados)
+	con.close()
+	cliente.terminaConexao()
+	exit()
 
-        # Gravando cache.
-        tam_arq = len(dados)
-        if tam_arq <= TAMANHO_MAX_CACHE and tam_arq > TAMANHO_MIN_CACHE:
-            grava_arquivo_cache(req[1], dados)
+
+def bloqueio(con, nome_dir, arq_info_bloqueio):
+    ''' Envia página de bloqueio para socket, fecha conexao
+            e interrompe thread atual.
+    '''
+    apaga_conteudo_cache(nome_dir)
+    con.send(abre_arquivo(arq_info_bloqueio))
     con.close()
-    cliente.terminaConexao()
     exit()
 
 
@@ -205,8 +209,8 @@ def verificaHttps(request):
 
 def extraiCabecalho(header):
     ''' Extrai dados do cabeçalho. Retorna uma tuple os dados extraidos.
-        Uma tuple contendo dados de requisição, dicionario contendo campos,
-        e os dados caso seja uma requisição POST. 
+            Uma tuple contendo dados de requisição, dicionario contendo campos,
+            e os dados caso seja uma requisição POST. 
     '''
     header_dict = {}
     header = header.split('\r\n')
@@ -229,7 +233,7 @@ def extraiCabecalho(header):
 
 def obterData(dados):
     ''' Obtem a data de um cabeçalho.
-        Retorna data caso exista e False caso contrário.
+            Retorna data caso exista e False caso contrário.
     '''
     try:
         return dados.split('Date: ')[1].split('\r\n')[0]
