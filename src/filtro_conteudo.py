@@ -3,33 +3,31 @@ from settings import PALAVRAS_BLOQUEADAS, DOMINIOS_BLOQUEADOS
 
 
 def pesquisaPalavra(html):
-    ''' Pesquisa palavras dentro de um conteúdo html'''
-    achou = False
+    ''' Pesquisa palavras dentro de um conteúdo html '''
+    arquivo = html.upper()
     try:
-        arq = open(PALAVRAS_BLOQUEADAS)
-        for palavra in arq:
-            palavra = palavra.strip()
-            if palavra and palavra in html:
-                achou = True
-                break
-        arq.close()
-        return achou
+        with open(PALAVRAS_BLOQUEADAS) as arq:
+            for palavra in arq:
+                palavra = palavra.strip()
+                if palavra and palavra.upper() in arquivo:
+                    print 'Palavra bloqueada = ', palavra
+                    return True
+
     except IOError:
-        return False
+        pass
+    return False
 
 
 def verificaDominio(host):
     '''Verifica se host tem permissão'''
-    achou = False
+    host = host.upper()
     try:
-        arq = open(DOMINIOS_BLOQUEADOS)
-        for dominio in arq:
-            dominio = dominio.strip()
-            if dominio and dominio == host:
-                achou = True
-                break
+        with open(DOMINIOS_BLOQUEADOS) as arq:
+            for dominio in arq:
+                dominio = dominio.strip().upper()
+                if dominio and dominio == host:
+                    return True
 
-        arq.close()
-        return achou
     except IOError:
-        return False
+        pass
+    return False
